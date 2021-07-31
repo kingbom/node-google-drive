@@ -2,8 +2,8 @@ const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs');
 
-const CLIENT_ID = 'your CLIENT_ID';
-const CLIENT_SECRET = 'your CLIENT_SECRET';
+const CLIENT_ID = 'your client ID';
+const CLIENT_SECRET = 'your client secret';
 const REDRIRECT_URI = 'https://developers.google.com/oauthplayground';
 const REFRESH_TOKEN = 'your YOUR REFRESH TOKEN GENERATED FROM oauthplayground';
 
