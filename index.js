@@ -1,85 +1,114 @@
 const { google } = require('googleapis');
+const express = require('express');
+const fileupload = require('express-fileupload');
 const path = require('path');
 const fs = require('fs');
 
-const CLIENT_ID = 'your CLIENT_ID';
-const CLIENT_SECRET = 'your CLIENT_SECRET';
-const REDRIRECT_URI = 'https://developers.google.com/oauthplayground';
-const REFRESH_TOKEN = 'your YOUR REFRESH TOKEN GENERATED FROM oauthplayground';
+const app = express();
+app.use(fileupload({
+    limits: { fileSize: 50 * 1024 * 1024 }
+}));
 
-const oauth2Client = new google.auth.OAuth2(
-    CLIENT_ID,
-    CLIENT_SECRET,
-    REDRIRECT_URI
+const KEY_FILE = 'credentials.json';
+const SCOPES = ['https://www.googleapis.com/auth/drive'];
+
+const auth = new google.auth.GoogleAuth({
+    keyFile : KEY_FILE,
+    scopes : SCOPES
+}
 );
-
-oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 
 const drive = google.drive({
     version : 'v3',
-    auth : oauth2Client
+    auth : auth
 });
 
-const filePath = path.join(__dirname, 'img1.jpeg');
-
-const uploadFile = async () => {
+const uploadFile = async (name, mimeType, filePath) => {
    try {
-       const response = await drive.files.create({
+       return await drive.files.create({
            requestBody: {
-               name :'img1.jpeg',
-               mimeType : 'image/jpeg'
+               name ,
+               mimeType 
            },
            media: {
-               mimeType : 'image/jpeg',
+               mimeType ,
                body: fs.createReadStream(filePath)
            }
        });
-
-       console.log(response.data);
    } catch (error) {
        console.error(error.message);
    }
 }
 
-const deleteFile = async () => {
+const deleteFile = async (fileId) => {
     try {
-        const response = await drive.files.delete({
-            fileId: 'fileId from response uploadFile'
-        });
-        console.log(response.data, response.status);
+        return await drive.files.delete( { fileId } );
     } catch (error) {
         console.error(error.message);
     }
 }
 
-const generatePublicUrl = async () => {
+const generatePublicUrl = async (fileId) => {
     try {
-        const fileId = 'fileId from response uploadFile';
         await drive.permissions.create({
-            fileId : fileId,
+            fileId ,
             requestBody : {
                 role : 'reader',
                 type : 'anyone'
             }
         });
 
-        const response = await drive.files.get({
-            fileId : fileId,
+        return await drive.files.get({
+            fileId ,
             fields : "webViewLink, webContentLink"
         });
-
-        console.log(response.data);
     } catch (error) {
         console.error(error.message);
     }
 }
 
-//Test upload file 
-//uploadFile();
+app.post('/upload', async (req, res) => {
+    if (req.files) {
+        const { file } = req.files;
+        const { name , mimetype } = file;
 
-//Test delete file 
-//deleteFile();
+        await file.mv(`${__dirname}/tmp/${name}`, (err) => {
+            if (err) {
+                console.log(err)
+                res.send('There is error')
+            }
+        });
 
-//Test generate public url
-//uploadFile();
-//generatePublicUrl();
+        const filePath = path.join(`${__dirname}/tmp`, name);
+        const response = await uploadFile(name, mimetype, filePath);
+        
+        fs.unlinkSync(filePath);
+
+        res.json(response.data);
+
+    } else {
+        res.send('There are no files')
+    }
+});
+
+app.get('/file/:fileId', async (req, res) => {
+    const { fileId } = req.params;
+    if (fileId) {
+        const response = await generatePublicUrl(fileId);
+        res.json(response.data);
+    } else {
+        res.send('Require params')
+    }
+});
+
+app.delete('/file/:fileId', async (req, res) => {
+    const { fileId } = req.params;
+    if (fileId) {
+        const response = await deleteFile(fileId);
+        res.json(response);
+    } else {
+        res.send('Require params')
+    }
+})
+
+app.listen(3000, () => console.log('running on port 3000'));

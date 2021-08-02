@@ -9,6 +9,8 @@
   "author": "Jaruwit.su",
   "license": "ISC",
   "dependencies": {
+    "express": "^4.17.1",
+    "express-fileupload": "^1.2.1",
     "googleapis": "^82.0.0"
   }
 }
