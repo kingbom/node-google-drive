@@ -6,7 +6,7 @@ const fs = require('fs');
 
 const app = express();
 app.use(fileupload({
-    limits: { fileSize: 50 * 1024 * 1024 }
+    limits: { fileSize: 30 * 1024 * 1024 }
 }));
 
 
